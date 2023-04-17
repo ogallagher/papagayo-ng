@@ -6,7 +6,7 @@ import traceback
 import appdirs
 import logging
 
-from PySide2 import QtCore, QtGui
+from PySide6 import QtCore, QtGui
 
 original_colors = {"wave_fill_color": QtGui.QColor(162, 205, 242),
                    "wave_line_color": QtGui.QColor(30, 121, 198),
@@ -123,19 +123,25 @@ def rhubarb_binaries_exists():
 
 _INIT_LOGGING_DONE = False
 def init_logging():
-    """Set up logging streams and format.
+    """Set up logging streams and formatters.
     """
 
     global _INIT_LOGGING_DONE
     if not _INIT_LOGGING_DONE:
         root_logger = logging.root
 
+        # stdout handler
         root_formatter = logging.Formatter(fmt='{name}.{levelname}.{lineno}: {msg}', style='{')
-
         stdout_handler = logging.StreamHandler(sys.stdout)
         stdout_handler.setFormatter(root_formatter)
-
         root_logger.addHandler(stdout_handler)
+
+        # log file handler
+        file_path = os.path.join(get_app_data_path(), 'runtime.log')
+        file_formatter = logging.Formatter('%(asctime)s:%(funcName)s:%(lineno)d:%(message)s', style='%')
+        file_handler = logging.FileHandler(filename=file_path, mode='a', encoding='utf-8')
+        root_logger.addHandler(file_handler)
+
         _INIT_LOGGING_DONE = True
         
     else:

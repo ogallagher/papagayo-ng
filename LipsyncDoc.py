@@ -15,7 +15,7 @@
 # You should have received a copy of the GNU General Public License
 # along with this program; if not, write to the Free Software
 # Foundation, Inc., 51 Franklin Street, Fifth Floor, Boston, MA  02110-1301, USA.
-
+import logging
 import math
 import shutil
 import sys
@@ -44,7 +44,7 @@ try:
 except ImportError:
     import ConfigParser as configparser
 
-import PySide2.QtCore as QtCore
+import PySide6.QtCore as QtCore
 
 import utilities
 from PronunciationDialogQT import PronunciationDialog, show_pronunciation_dialog
@@ -57,12 +57,13 @@ config = QtCore.QSettings(ini_path, QtCore.QSettings.IniFormat)
 if config.value("audio_output", "old") == "old":
     import SoundPlayer as SoundPlayer
 else:
-    if sys.platform == "win32":
-        import SoundPlayerNew as SoundPlayer
-    elif sys.platform == "darwin":
-        import SoundPlayerOSX as SoundPlayer
-    else:
-        import SoundPlayer as SoundPlayer
+    import SoundPlayer as SoundPlayer
+    # if sys.platform == "win32":
+    #     import SoundPlayerNew as SoundPlayer
+    # elif sys.platform == "darwin":
+    #     import SoundPlayerOSX as SoundPlayer
+    # else:
+    #     import SoundPlayer as SoundPlayer
 
 strip_symbols = '.,!?;-/()"'
 strip_symbols += '\N{INVERTED QUESTION MARK}'
@@ -88,7 +89,7 @@ class LanguageManager:
         try:
             in_file = open(path, 'r')
         except FileNotFoundError:
-            print("Unable to open phoneme dictionary!:{}".format(path))
+            logging.info("Unable to open phoneme dictionary!:{}".format(path))
             return
         new_cmu_version = False
         if in_file.readline().startswith(";;; # CMUdict"):
@@ -155,7 +156,7 @@ class LanguageManager:
                         details["dictionaries"][key] = value
                 self.language_table[label] = details
             else:
-                print("unknown type ignored language not added to table")
+                logging.info("unknown type ignored language not added to table")
 
     def init_languages(self):
         if len(self.language_table) > 0:
@@ -278,10 +279,28 @@ class LipSyncObject(NodeMixin):
                     self.last_returned_frame = descendant.text
                     return descendant.text
 
-        if not self.config.value("RepeatLastPhoneme", True):
-            return "rest"
+        if str(self.config.value("rest_after_words", True)).lower() == "true":
+            if not self.frame_is_in_word(frame):
+                return "rest"
+            else:
+                if str(self.config.value("rest_after_phonemes", True)).lower() == "true":
+                    return "rest"
+                else:
+                    return self.last_returned_frame
         else:
-            return self.last_returned_frame
+            if str(self.config.value("rest_after_phonemes", True)).lower() == "true":
+                return "rest"
+            else:
+                return self.last_returned_frame
+
+    def frame_is_in_word(self, frame):
+        is_in_word = False
+        for descendant in self.descendants:
+            if descendant.object_type == "word":
+                if descendant.start_frame <= frame <= descendant.end_frame:
+                    is_in_word = True
+                    return is_in_word
+        return is_in_word
 
     def reposition_to_left(self):
         if self.has_left_sibling():
@@ -506,7 +525,7 @@ class LipSyncObject(NodeMixin):
                         pronunciation_phoneme = pronunciation_raw[i].rstrip("0123456789")
                         pronunciation.append(phonemeset.conversion[pronunciation_phoneme])
                     except KeyError:
-                        print(("Unknown phoneme:", pronunciation_raw[i], "in word:", text))
+                        logging.info(("Unknown phoneme:", pronunciation_raw[i], "in word:", text))
 
                 for p in pronunciation:
                     if len(p) == 0:
@@ -534,7 +553,7 @@ class LipSyncObject(NodeMixin):
 
     ###
 
-    def export(self, path):
+    def export(self, path, use_rest_frame_settings=False):
 
         out_file = open(path, 'w')
         out_file.write("MohoSwitch1\n")
@@ -554,14 +573,19 @@ class LipSyncObject(NodeMixin):
                 if phoneme.text == "rest":
                     # export an extra "rest" phoneme at the end of a pause between words or phrases
                     out_file.write("{:d} {}\n".format(phoneme.start_frame, phoneme.text))
+            if use_rest_frame_settings:
+                if str(self.config.value("rest_after_words", True)).lower() == "true":
+                    if last_phoneme.parent != phoneme.parent:
+                        if (last_phoneme.start_frame + 1) < phoneme.start_frame:
+                            out_file.write("{:d} {}\n".format((last_phoneme.start_frame + 2), "rest"))
             last_phoneme = phoneme
             out_file.write("{:d} {}\n".format(phoneme.start_frame + 1, phoneme.text))
         out_file.write("{:d} {}\n".format(end_frame + 2, "rest"))
         out_file.close()
 
-    def export_images(self, path, currentmouth):
+    def export_images(self, path, currentmouth, use_rest_frame_settings=False):
         if not self.config.value("MouthDir"):
-            print("Use normal procedure.\n")
+            logging.info("Use normal procedure.\n")
             phonemedict = {}
             for files in os.listdir(os.path.join(utilities.get_main_dir(), "rsrc", "mouths", currentmouth)):
                 phonemedict[os.path.splitext(files)[0]] = os.path.splitext(files)[1]
@@ -572,10 +596,10 @@ class LipSyncObject(NodeMixin):
                                 path + str(phoneme.start_frame).rjust(6, '0') +
                                 phoneme.text + phonemedict[phoneme.text])
                 except KeyError:
-                    print("Phoneme \'{0}\' does not exist in chosen directory.".format(phoneme.text))
+                    logging.info("Phoneme \'{0}\' does not exist in chosen directory.".format(phoneme.text))
 
         else:
-            print("Use this dir: {}\n".format(self.config.value("MouthDir")))
+            logging.info("Use this dir: {}\n".format(self.config.value("MouthDir")))
             phonemedict = {}
             for files in os.listdir(self.config.value("MouthDir")):
                 phonemedict[os.path.splitext(files)[0]] = os.path.splitext(files)[1]
@@ -586,9 +610,9 @@ class LipSyncObject(NodeMixin):
                         "{}{}{}{}".format(path, str(phoneme.start_frame).rjust(6, "0"), phoneme.text,
                                           phonemedict[phoneme.text]))
                 except KeyError:
-                    print("Phoneme \'{0}\' does not exist in chosen directory.".format(phoneme.text))
+                    logging.info("Phoneme \'{0}\' does not exist in chosen directory.".format(phoneme.text))
 
-    def export_alelo(self, path, language, languagemanager):
+    def export_alelo(self, path, language, languagemanager, use_rest_frame_settings=False):
         out_file = open(path, 'w')
         for phrase in self.children:
             for word in phrase.children:
@@ -605,9 +629,7 @@ class LipSyncObject(NodeMixin):
                     pronunciation = languagemanager.raw_dictionary[text]
                 first = True
                 position = -1
-                #               print word.text
                 for phoneme in word.children:
-                    #                   print phoneme.text
                     if first:
                         first = False
                     else:
@@ -631,14 +653,14 @@ class LipSyncObject(NodeMixin):
                     pass
         out_file.close()
 
-    def export_json(self, path):
+    def export_json(self, path, sound_path="", use_rest_frame_settings=False):
         if len(self.children) > 0:
             start_frame = self.children[0].start_frame
             end_frame = self.children[-1].end_frame
         else:  # No phrases means no data, so do nothing
             return
         json_data = {"name": self.name, "start_frame": start_frame, "end_frame": end_frame,
-                     "text": self.text, "num_children": self.num_children, "fps": self.fps}
+                     "text": self.text, "num_children": self.num_children, "fps": self.fps, "sound_path": sound_path}
         list_of_phrases = []
         list_of_used_phonemes = []
         for phr_id, phrase in enumerate(self.children):
@@ -772,9 +794,9 @@ class LipsyncDoc:
         if not os.path.isabs(self.soundPath):
             self.soundPath = os.path.normpath("{}/{}".format(os.path.dirname(self.path), self.soundPath))
         self.fps = int(in_file.readline())
-        print(("self.path: {}".format(self.path)))
+        logging.info(("self.path: {}".format(self.path)))
         self.soundDuration = int(in_file.readline())
-        print(("self.soundDuration: {:d}".format(self.soundDuration)))
+        logging.info(("self.soundDuration: {:d}".format(self.soundDuration)))
         self.project_node.sound_duration = self.soundDuration
         num_voices = int(in_file.readline())
         for i in range(num_voices):
@@ -786,6 +808,19 @@ class LipsyncDoc:
         if len(self.voices) > 0:
             self.current_voice = self.voices[0]
 
+    def get_audio_chunk(self, start_frame, end_frame):
+        """Instead of loading the whole file we can just load a chunk of it."""
+        if self.sound is None:
+            return None
+        if start_frame < 0:
+            start_frame = 0
+        if end_frame > self.sound.length:
+            end_frame = self.sound.length
+        if start_frame >= end_frame:
+            return None
+        return self.sound.get_samples(start_frame, end_frame)
+
+
     def open_audio(self, path):
         if not os.path.exists(path):
             return
@@ -796,14 +831,14 @@ class LipsyncDoc:
         self.soundPath = path  # .encode('latin-1', 'replace')
         self.sound = SoundPlayer.SoundPlayer(self.soundPath, self.parent)
         if self.sound.IsValid():
-            print("valid sound")
+            logging.info("valid sound")
             self.soundDuration = int(self.sound.Duration() * self.fps)
-            print(("self.sound.Duration(): {:d}".format(int(self.sound.Duration()))))
-            print(("frameRate: {:d}".format(int(self.fps))))
-            print(("soundDuration1: {:d}".format(self.soundDuration)))
+            logging.info(("self.sound.Duration(): {:d}".format(int(self.sound.Duration()))))
+            logging.info(("frameRate: {:d}".format(int(self.fps))))
+            logging.info(("soundDuration1: {:d}".format(self.soundDuration)))
             if self.soundDuration < self.sound.Duration() * self.fps:
                 self.soundDuration += 1
-                print(("soundDuration2: {:d}".format(self.soundDuration)))
+                logging.info(("soundDuration2: {:d}".format(self.soundDuration)))
             self.project_node.sound_duration = self.soundDuration
         else:
             self.sound = None
@@ -956,10 +991,8 @@ class LipsyncDoc:
             new_map.load(new_set)
             for conversion_name in new_map.alternate_conversions:
                 if conversion_name.startswith(old_set.lower()):
-                    print(conversion_name)
                     conversion_dict = new_map.alternate_conversions[conversion_name]
             if conversion_dict:
-                print(conversion_dict)
                 for voice in self.project_node.children:
                     for phrase in voice.children:
                         for word in phrase.children:
@@ -988,7 +1021,7 @@ class LipsyncDoc:
             # self.parent.main_window.waveform_view.set_document(self, force=True, clear_scene=True)
 
     def auto_recognize_phoneme(self, manual_invoke=False):
-        if self.settings.value("/VoiceRecognition/run_voice_recognition", "true").lower() == "true" or manual_invoke:
+        if str(self.settings.value("/VoiceRecognition/run_voice_recognition", "true")).lower() == "true" or manual_invoke:
             if auto_recognition:
                 if self.settings.value("/VoiceRecognition/recognizer", "Allosaurus") == "Allosaurus":
                     allo_recognizer = auto_recognition.AutoRecognize(self.soundPath)
@@ -1119,5 +1152,5 @@ class PhonemeSet:
                         self.alternate_conversions[key] = json_data[key]
                 return name
         else:
-            print(("Can't find phonemeset! ({})".format(name)))
+            logging.info(("Can't find phonemeset! ({})".format(name)))
             return False

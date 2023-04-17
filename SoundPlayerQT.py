@@ -1,15 +1,14 @@
-from PySide2 import QtWidgets
+from PySide6 import QtWidgets
 
-from utilities import *
-
+import utilities
+import logging
 import time
 
-from PySide2.QtMultimedia import QMediaPlayer, QAudioFormat, QAudioBuffer, QAudioDecoder
-from PySide2.QtMultimedia import QAudioOutput
-from PySide2.QtCore import QCoreApplication
-from PySide2.QtCore import QUrl
+from PySide6.QtMultimedia import QMediaPlayer, QAudioFormat, QAudioBuffer, QAudioDecoder
+from PySide6.QtMultimedia import QAudioOutput
+from PySide6.QtCore import QCoreApplication
+from PySide6.QtCore import QUrl
 
-from utilities import which
 from cffi import FFI
 
 ffi = FFI()
@@ -40,8 +39,8 @@ class SoundPlayer:
         # File Loading is Asynchronous, so we need to be creative here, doesn't need to be duration but it works
         self.audio.durationChanged.connect(self.on_durationChanged)
         self.decoder.finished.connect(self.decode_finished_signal)
-        self.audio.setMedia(QUrl.fromLocalFile(soundfile))
-        self.decoder.setSourceFilename(soundfile)  # strangely inconsistent file-handling
+        self.audio.setSource(QUrl.fromLocalFile(soundfile))
+        self.decoder.setSource(soundfile)  # strangely inconsistent file-handling
         self.top_level_widget = None
 
         for widget in QtWidgets.QApplication.topLevelWidgets():
@@ -61,35 +60,44 @@ class SoundPlayer:
         self.np_data = np.array(self.only_samples)
         if not self.signed:  # don't ask me why this fixes 8 bit samples...
             self.np_data = self.np_data - self.max_bits / 2
-        print(len(self.only_samples))
-        print(self.max_bits)
         self.isvalid = True
 
     def audioformat_to_datatype(self, audioformat):
-        num_bits = audioformat.sampleSize()
-        signed = audioformat.sampleType()
+        num_bits = audioformat.bytesPerSample()
+        signed = audioformat.sampleFormat()
         self.max_bits = 2 ** int(num_bits)
-        if signed == QAudioFormat.SampleType.UnSignedInt:
+        if signed == QAudioFormat.UInt8:
             self.signed = False
             return "uint{0}_t".format(str(num_bits))
-        elif signed == QAudioFormat.SampleType.SignedInt:
+        elif signed in [QAudioFormat.Int16, QAudioFormat.Int32]:
             self.signed = True
             self.max_bits = int(self.max_bits / 2)
             return "int{0}_t".format(str(num_bits))
+        else:
+            logging.error("Unsupported audio format")
+            return None
 
     def decode_audio(self, progress_callback):
         self.decoder.start()
         while not self.decoding_is_finished:
             QCoreApplication.processEvents()
             if self.decoder.bufferAvailable():
+
                 tempdata = self.decoder.read()
-                # We use the Pointer Address to get a cffi Pointer to the data (hopefully)
-                cast_data = self.audioformat_to_datatype(tempdata.format())
-                possible_data = ffi.cast("{1}[{0}]".format(tempdata.sampleCount(), cast_data),
-                                         int(tempdata.constData()))
-                self.only_samples.extend(possible_data)
-                self.decoded_audio[self.decoder.position()] = [possible_data, len(possible_data), tempdata.byteCount(),
-                                                               tempdata.format()]
+                if tempdata.isValid():
+                    """Save the data from the buffer to our self.decoded_audio dict"""
+                    if "data" not in dir(tempdata):
+                        continue
+                    else:
+                        print("Decoding data")
+                    # We use the Pointer Address to get a cffi Pointer to the data (hopefully)
+                    cast_data = self.audioformat_to_datatype(tempdata.format())
+                    print(dir(tempdata))
+                    possible_data = ffi.cast("{1}[{0}]".format(tempdata.sampleCount(), cast_data),
+                                             int(tempdata.data()))
+                    self.only_samples.extend(possible_data)
+                    self.decoded_audio[self.decoder.position()] = [possible_data, len(possible_data), tempdata.byteCount(),
+                                                                   tempdata.format()]
             progress_callback(self.decoder.position())
 
     def decode_finished_signal(self):
@@ -99,7 +107,7 @@ class SoundPlayer:
         self.is_loaded = True
 
     def get_audio_buffer(self, bufferdata):
-        print(bufferdata)
+        logging.info(bufferdata)
 
     def IsValid(self):
         return self.isvalid
@@ -121,7 +129,7 @@ class SoundPlayer:
             return 1
 
     def is_playing(self):
-        if self.audio.state() == QMediaPlayer.PlayingState:
+        if self.audio.playbackState() == QMediaPlayer.PlayingState:
             return True
         else:
             return False

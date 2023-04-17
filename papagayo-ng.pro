@@ -22,4 +22,5 @@ OTHER_FILES += about_markdown.html
 
 TRANSLATIONS += en_us.ts \
                 de_de.ts \
+                fr_fr.ts \
                 es_us.ts

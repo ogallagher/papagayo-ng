@@ -220,14 +220,48 @@
       <enum>QFrame::Plain</enum>
      </property>
      <property name="currentIndex">
-      <number>2</number>
+      <number>3</number>
      </property>
      <widget class="QWidget" name="general">
       <layout class="QGridLayout" name="gridLayout_2">
+       <item row="3" column="1">
+        <widget class="QComboBox" name="ui_language">
+         <property name="currentText">
+          <string/>
+         </property>
+        </widget>
+       </item>
+       <item row="1" column="0">
+        <widget class="QLabel" name="label_7">
+         <property name="text">
+          <string>Show Rest Frames after Words</string>
+         </property>
+        </widget>
+       </item>
        <item row="1" column="1">
-        <widget class="QCheckBox" name="hold_phonemes">
+        <widget class="QCheckBox" name="rest_after_words">
          <property name="text">
           <string>Enable</string>
+         </property>
+        </widget>
+       </item>
+       <item row="3" column="0">
+        <widget class="QLabel" name="label_8">
+         <property name="text">
+          <string>Language (needs restart to apply)</string>
+         </property>
+        </widget>
+       </item>
+       <item row="0" column="1">
+        <widget class="QSpinBox" name="fps_value">
+         <property name="minimum">
+          <number>1</number>
+         </property>
+         <property name="maximum">
+          <number>999</number>
+         </property>
+         <property name="value">
+          <number>24</number>
          </property>
         </widget>
        </item>
@@ -247,37 +281,17 @@
          </property>
         </widget>
        </item>
-       <item row="0" column="1">
-        <widget class="QSpinBox" name="fps_value">
-         <property name="minimum">
-          <number>1</number>
-         </property>
-         <property name="maximum">
-          <number>999</number>
-         </property>
-         <property name="value">
-          <number>24</number>
-         </property>
-        </widget>
-       </item>
-       <item row="1" column="0">
-        <widget class="QLabel" name="label_7">
-         <property name="text">
-          <string>Hold Phonemes during playback</string>
-         </property>
-        </widget>
-       </item>
        <item row="2" column="0">
-        <widget class="QLabel" name="label_8">
+        <widget class="QLabel" name="label_12">
          <property name="text">
-          <string>Language (needs restart to apply)</string>
+          <string>Show Rest Frames after Phonemes</string>
          </property>
         </widget>
        </item>
        <item row="2" column="1">
-        <widget class="QComboBox" name="ui_language">
-         <property name="currentText">
-          <string/>
+        <widget class="QCheckBox" name="rest_after_phonemes">
+         <property name="text">
+          <string>Enable</string>
          </property>
         </widget>
        </item>
@@ -299,7 +313,7 @@ color: rgb(255, 255, 255);
 border: transparent;</string>
          </property>
          <property name="text">
-          <string>Frame Text Color</string>
+          <string notr="true">Frame Text Color</string>
          </property>
         </widget>
        </item>
@@ -316,7 +330,7 @@ border: transparent;</string>
 border: transparent;</string>
          </property>
          <property name="text">
-          <string>Word Fill Color</string>
+          <string notr="true">Word Fill Color</string>
          </property>
         </widget>
        </item>
@@ -333,7 +347,7 @@ border: transparent;</string>
 border: transparent;</string>
          </property>
          <property name="text">
-          <string>Word Line Color</string>
+          <string notr="true">Word Line Color</string>
          </property>
         </widget>
        </item>
@@ -350,7 +364,7 @@ border: transparent;</string>
 border: transparent;</string>
          </property>
          <property name="text">
-          <string>Phrase Line Color</string>
+          <string notr="true">Phrase Line Color</string>
          </property>
         </widget>
        </item>
@@ -367,7 +381,7 @@ border: transparent;</string>
 border: transparent;</string>
          </property>
          <property name="text">
-          <string>Playback Marker Fill Color</string>
+          <string notr="true">Playback Marker Fill Color</string>
          </property>
         </widget>
        </item>
@@ -384,7 +398,7 @@ border: transparent;</string>
 border: transparent;</string>
          </property>
          <property name="text">
-          <string>Frame Color</string>
+          <string notr="true">Frame Color</string>
          </property>
         </widget>
        </item>
@@ -403,7 +417,7 @@ border: transparent;
 </string>
          </property>
          <property name="text">
-          <string>Waveform Fill Color</string>
+          <string notr="true">Waveform Fill Color</string>
          </property>
          <property name="flat">
           <bool>false</bool>
@@ -423,7 +437,7 @@ border: transparent;
 border: transparent;</string>
          </property>
          <property name="text">
-          <string>Phoneme Line Color</string>
+          <string notr="true">Phoneme Line Color</string>
          </property>
         </widget>
        </item>
@@ -441,7 +455,7 @@ color: rgb(255, 255, 255);
 border: transparent;</string>
          </property>
          <property name="text">
-          <string>Playback Marker Line Color</string>
+          <string notr="true">Playback Marker Line Color</string>
          </property>
         </widget>
        </item>
@@ -474,7 +488,7 @@ border: transparent;</string>
 border: transparent;</string>
          </property>
          <property name="text">
-          <string>Waveform Line Color</string>
+          <string notr="true">Waveform Line Color</string>
          </property>
          <property name="flat">
           <bool>false</bool>
@@ -494,7 +508,7 @@ border: transparent;</string>
 border: transparent;</string>
          </property>
          <property name="text">
-          <string>Phoneme Fill Color</string>
+          <string notr="true">Phoneme Fill Color</string>
          </property>
         </widget>
        </item>
@@ -511,7 +525,7 @@ border: transparent;</string>
 border: transparent;</string>
          </property>
          <property name="text">
-          <string>Phrase Fill Color</string>
+          <string notr="true">Phrase Fill Color</string>
          </property>
         </widget>
        </item>
@@ -529,12 +543,21 @@ border: transparent;</string>
            <height>20</height>
           </size>
          </property>
+         <property name="whatsThis">
+          <string/>
+         </property>
+         <property name="accessibleName">
+          <string notr="true"/>
+         </property>
+         <property name="accessibleDescription">
+          <string notr="true"/>
+         </property>
          <property name="styleSheet">
           <string notr="true">background-color: rgb(255, 255, 255);
 border: transparent;</string>
          </property>
          <property name="text">
-          <string>Background Color</string>
+          <string notr="true">Background Color</string>
          </property>
         </widget>
        </item>
@@ -598,14 +621,14 @@ border: transparent;</string>
        <item row="3" column="2">
         <widget class="QLineEdit" name="model_name">
          <property name="text">
-          <string>latest</string>
+          <string notr="true">latest</string>
          </property>
         </widget>
        </item>
        <item row="2" column="2">
         <widget class="QLineEdit" name="lang_id_value">
          <property name="text">
-          <string>eng</string>
+          <string notr="true">eng</string>
          </property>
         </widget>
        </item>

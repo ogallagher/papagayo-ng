@@ -14,7 +14,7 @@
    <bool>true</bool>
   </property>
   <property name="windowTitle">
-   <string>MainWindow</string>
+   <string notr="true">MainWindow</string>
   </property>
   <property name="windowIcon">
    <iconset resource="../qt-icons.qrc">
@@ -317,6 +317,13 @@
                   <property name="icon">
                    <iconset resource="../qt-icons.qrc">
                     <normaloff>:/rsrc/icons/gallery-line.png</normaloff>:/rsrc/icons/gallery-line.png</iconset>
+                  </property>
+                 </widget>
+                </item>
+                <item>
+                 <widget class="QCheckBox" name="apply_rest_frames_on_export">
+                  <property name="text">
+                   <string>Apply Rest Frame Settings on Export</string>
                   </property>
                  </widget>
                 </item>
@@ -757,7 +764,7 @@
     <bool>true</bool>
    </property>
    <property name="windowTitle">
-    <string>toolBar</string>
+    <string notr="true">toolBar</string>
    </property>
    <attribute name="toolBarArea">
     <enum>TopToolBarArea</enum>

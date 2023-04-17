@@ -1,12 +1,13 @@
 import json
+import logging
 import subprocess
 import os
 import threading
 import utilities
 
-from PySide2 import QtWidgets
-from PySide2.QtWidgets import QProgressDialog
-from PySide2.QtCore import QCoreApplication
+from PySide6 import QtWidgets
+from PySide6.QtWidgets import QProgressDialog
+from PySide6.QtCore import QCoreApplication
 import sys
 
 if sys.platform == "win32":
@@ -76,7 +77,7 @@ class Rhubarb:
         self.top_level_widget.lip_sync_frame.status_progress.setMaximum(100)
 
     def _signal_handler(self):
-        print(self.translator.translate("Rhubarb", 'Rhubarb did not respond for more than 30 seconds.'))
+        logging.info(self.translator.translate("Rhubarb", 'Rhubarb did not respond for more than 30 seconds.'))
         raise RhubarbTimeoutException()
 
     def _read_log(self):

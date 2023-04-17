@@ -3,14 +3,18 @@ Unicode true
 OutFile "..\papagayo-ng_installer.exe"
 InstallDir "$PROGRAMFILES\Papagayo-NG"
 
-Name "Papagayo-NG"
+!getdllversion ".\papagayo-ng.exe" papagayo_version_
+!echo "papagayo.exe version is ${papagayo_version_1}.${papagayo_version_2}.${papagayo_version_3}.${papagayo_version_4}"
 
-InstallDirRegKey HKLM "Software\Papagayo-NG" "Path"
+!define Name "Papagayo-NG${papagayo_version_1}.${papagayo_version_2}.${papagayo_version_3}.${papagayo_version_4}"
+Name "${Name}"
+
+InstallDirRegKey HKLM "Software\$(^Name)" "Path"
 
 SetCompressor /final lzma
 !include MUI2.nsh
 !include "LogicLib.nsh"
-!define MUI_PAGE_HEADER_TEXT "Papagayo-NG"
+!define MUI_PAGE_HEADER_TEXT "$(^Name)"
 
 !define MUI_ICON ".\papagayo-ng.ico"
 !define MUI_HEADERIMAGE
@@ -36,7 +40,19 @@ LicenseData "..\nsis_extra_files\gpl.txt"
 !insertmacro MUI_LANGUAGE "English"
 
 Section "Papagayo-NG (required)"
-  SectionIn RO  
+  ; Check to see if already installed
+    ReadRegStr $R0 HKLM "Software\Microsoft\Windows\CurrentVersion\Uninstall\$(^Name)" "UninstallString"
+      IfFileExists $R0 +1 NotInstalled
+      MessageBox MB_YESNO "$(^Name) is already installed. Uninstall the existing version?" /SD IDYES IDNO Quit
+        Pop $R1
+      StrCmp $R1 2 Quit +1
+      Exec $R0
+    Quit:
+      Quit
+
+    NotInstalled:
+
+  SectionIn RO
   WriteRegStr HKLM "Software\$(^Name)" "Path" "$INSTDIR"
   WriteRegStr HKLM "Software\Microsoft\Windows\CurrentVersion\Uninstall\$(^Name)" "DisplayName" "$(^Name)"
   WriteRegStr HKLM "Software\Microsoft\Windows\CurrentVersion\Uninstall\$(^Name)" "UninstallString" "$INSTDIR\uninstall.exe"

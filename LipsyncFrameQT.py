@@ -23,17 +23,17 @@
 # from utilities import Worker, WorkerSignals
 import importlib
 import json
+import logging
 import shutil
 import sys
 import os
 import tarfile
 import time
 from functools import partial
-from pprint import pprint
 
-from PySide2.QtCore import QFile, QObject
-from PySide2 import QtCore, QtGui, QtWidgets
-from PySide2.QtUiTools import QUiLoader as uic
+from PySide6.QtCore import QFile, QObject
+from PySide6 import QtCore, QtGui, QtWidgets
+from PySide6.QtUiTools import QUiLoader as uic
 
 import urllib.request
 import io
@@ -112,8 +112,7 @@ def open_file_no_gui(path, parent):
             # open a json based lipsync project
             doc.open_json(path)
         if doc.sound is None:
-            print("Could not load Sound file.")
-            print(doc.soundPath)
+            logging.info("Could not load Sound file: " + doc.soundPath)
             return None
     else:
         # open an audio file
@@ -135,7 +134,7 @@ class LipsyncFrame:
     def __init__(self):
         QtCore.QCoreApplication.setAttribute(QtCore.Qt.AA_ShareOpenGLContexts)
 
-        self.app = QtWidgets.QApplication(sys.argv)
+        self.app = QtCore.QCoreApplication.instance()
         self.translator = utilities.ApplicationTranslator()
         self.loader = None
         self.ui_file = None
@@ -289,19 +288,20 @@ class LipsyncFrame:
         self.dropfilter = DropFilter()
         self.main_window.topLevelWidget().installEventFilter(self.dropfilter)
 
-        self.main_window.action_allo_download.triggered.connect(lambda: self.start_download(self.download_allosaurus_model))
+        self.main_window.action_allo_download.triggered.connect(
+            lambda: self.start_download(self.download_allosaurus_model))
         self.main_window.action_rhubarb_download.triggered.connect(lambda: self.start_download(self.download_rhubarb))
         self.main_window.action_ffmpeg_download.triggered.connect(lambda: self.start_download(self.download_ffmpeg))
         if not utilities.ffmpeg_binaries_exists():
-            self.ffmpeg_action = QtWidgets.QAction("Download FFmpeg")
+            self.ffmpeg_action = QtGui.QAction("Download FFmpeg")
             self.ffmpeg_action.triggered.connect(lambda: self.start_download(self.download_ffmpeg))
             self.main_window.menubar.addAction(self.ffmpeg_action)
         if not utilities.allosaurus_model_exists():
-            self.model_action = QtWidgets.QAction("Download AI Model")
+            self.model_action = QtGui.QAction("Download AI Model")
             self.model_action.triggered.connect(lambda: self.start_download(self.download_allosaurus_model))
             self.main_window.menubar.addAction(self.model_action)
         if not utilities.rhubarb_binaries_exists():
-            self.rhubarb_action = QtWidgets.QAction("Download Rhubarb")
+            self.rhubarb_action = QtGui.QAction("Download Rhubarb")
             self.rhubarb_action.triggered.connect(lambda: self.start_download(self.download_rhubarb))
             self.main_window.menubar.addAction(self.rhubarb_action)
         self.change_stylesheet()
@@ -316,6 +316,16 @@ class LipsyncFrame:
         self.wv_brush = QtGui.QBrush(QtCore.Qt.blue)
         self.start_time = time.time()
         self.threadpool = QtCore.QThreadPool.globalInstance()
+
+    def show_error_dialog(self, error_message):
+        dlg = QtWidgets.QMessageBox()
+        dlg.setText(error_message)
+        dlg.setWindowTitle("Missing Phoneme Conversion")
+        dlg.setWindowIcon(self.main_window.windowIcon())
+        dlg.setStandardButtons(QtWidgets.QMessageBox.Ok)
+        dlg.setDefaultButton(QtWidgets.QMessageBox.Ok)
+        dlg.setIcon(QtWidgets.QMessageBox.Information)
+        dlg.exec_()
 
     def change_stylesheet(self):
         style_file_path = self.config.value("qss_file_path", "")
@@ -462,10 +472,10 @@ class LipsyncFrame:
         download_json = json.loads(urllib.request.urlopen(github_url).read())
         for download in download_json[0]["assets"]:
             if platform.system() == "Darwin":
-                if download["name"].endswith("-osx.zip"):
+                if download["name"].endswith("-macOS.zip"):
                     release_url = download["browser_download_url"]
             else:
-                if download["name"].endswith("-win32.zip"):
+                if download["name"].endswith("-Windows.zip"):
                     release_url = download["browser_download_url"]
         rhubarb_path = os.path.join(utilities.get_app_data_path(), binary)
 
@@ -489,8 +499,6 @@ class LipsyncFrame:
                         progress_callback.emit(percent)
                 if buffer_all:
                     rhubarb_zip = ZipFile(buffer_all)
-                    print(os.path.join(utilities.get_app_data_path(), "rhubarb"))
-                    print(rhubarb_zip.filelist)
                     dirs = list(set([os.path.dirname(x) for x in rhubarb_zip.namelist()]))
                     main_dir = os.path.dirname([os.path.split(x)[0] for x in dirs][0])
                     if os.path.exists(os.path.join(utilities.get_app_data_path(), "rhubarb")):
@@ -620,7 +628,7 @@ class LipsyncFrame:
 
     def apply_changed_fps(self):
         new_fps_value = self.main_window.fps_input.value()
-        print('FPS changed to: {0}'.format(str(new_fps_value)))
+        logging.info('FPS changed to: {0}'.format(str(new_fps_value)))
         old_fps_value = self.doc.fps
         resize_multiplier = new_fps_value / old_fps_value
         if resize_multiplier != 1:
@@ -847,15 +855,15 @@ class LipsyncFrame:
 
     def settings_closed(self):
         if not utilities.ffmpeg_binaries_exists():
-            self.ffmpeg_action = QtWidgets.QAction(self.translator.translate("LipsyncFrame", "Download FFmpeg"))
+            self.ffmpeg_action = QtGui.QAction(self.translator.translate("LipsyncFrame", "Download FFmpeg"))
             self.ffmpeg_action.triggered.connect(lambda: self.start_download(self.download_ffmpeg))
             self.main_window.menubar.addAction(self.ffmpeg_action)
         if not utilities.allosaurus_model_exists():
-            self.model_action = QtWidgets.QAction(self.apptranslator.translate("LipsyncFrame", "Download AI Model"))
+            self.model_action = QtGui.QAction(self.translator.translate("LipsyncFrame", "Download AI Model"))
             self.model_action.triggered.connect(lambda: self.start_download(self.download_allosaurus_model))
             self.main_window.menubar.addAction(self.model_action)
         if not utilities.rhubarb_binaries_exists():
-            self.rhubarb_action = QtWidgets.QAction(self.apptranslator.translate("LipsyncFrame", "Download Rhubarb"))
+            self.rhubarb_action = QtGui.QAction(self.translator.translate("LipsyncFrame", "Download Rhubarb"))
             self.rhubarb_action.triggered.connect(lambda: self.start_download(self.download_rhubarb))
             self.main_window.menubar.addAction(self.rhubarb_action)
         self.main_window.waveform_view.set_document(self.doc, True, True)
@@ -907,7 +915,9 @@ class LipsyncFrame:
                         fps = 1.0 / (time.time() - self.start_time)
                     except ZeroDivisionError:
                         fps = 60
-                    self.main_window.statusbar.showMessage(self.translator.translate("LipsyncFrame", "Frame: {:d} FPS: {:d}".format((cur_frame + 1), int(fps))))
+                    self.main_window.statusbar.showMessage(self.translator.translate("LipsyncFrame",
+                                                                                     "Frame: {:d} FPS: {:d}".format(
+                                                                                         (cur_frame + 1), int(fps))))
                     self.main_window.waveform_view.scroll_position = self.main_window.waveform_view.horizontalScrollBar().value()
                     self.start_time = time.time()
             else:
@@ -956,7 +966,8 @@ class LipsyncFrame:
             old_doc = self.doc.copy_to_dict()
             self.doc.dirty = True
             self.doc.current_voice.children = []
-            return_value = self.doc.current_voice.run_breakdown(self.doc.soundDuration, self, language, self.langman, self.phonemeset)
+            return_value = self.doc.current_voice.run_breakdown(self.doc.soundDuration, self, language, self.langman,
+                                                                self.phonemeset)
             if return_value == -1:
                 self.doc.open_from_dict(old_doc)
             self.phonemeset.selected_set = self.phonemeset.load(phonemeset_name)
@@ -981,7 +992,8 @@ class LipsyncFrame:
                 fps = int(self.config.value("FPS", 24))
                 if fps != 100:
                     dlg = QtWidgets.QMessageBox()
-                    dlg.setText(self.translator.translate("LipsyncFrame", "FPS is NOT 100 continue? (You will have issues downstream.)"))
+                    dlg.setText(self.translator.translate("LipsyncFrame",
+                                                          "FPS is NOT 100 continue? (You will have issues downstream.)"))
                     dlg.setStandardButtons(QtWidgets.QMessageBox.Yes | QtWidgets.QMessageBox.No)
                     dlg.setDefaultButton(QtWidgets.QMessageBox.Yes)
                     dlg.setIcon(QtWidgets.QMessageBox.Question)
@@ -1014,13 +1026,17 @@ class LipsyncFrame:
             if file_path:
                 self.config.setValue("WorkingDir", os.path.dirname(file_path))
                 if exporter == "MOHO":
-                    self.doc.current_voice.export(file_path if ("." in file_path) else file_path + ".dat")
+                    self.doc.current_voice.export(file_path if ("." in file_path) else file_path + ".dat",
+                                                  self.main_window.apply_rest_frames_on_export.isChecked())
                 elif exporter == "ALELO":
-                    self.doc.current_voice.export_alelo(file_path, language, self.langman)
+                    self.doc.current_voice.export_alelo(file_path, language, self.langman,
+                                                        self.main_window.apply_rest_frames_on_export.isChecked())
                 elif exporter == "Images":
-                    self.doc.current_voice.export_images(file_path, self.main_window.mouth_choice.currentText())
+                    self.doc.current_voice.export_images(file_path, self.main_window.mouth_choice.currentText(),
+                                                         self.main_window.apply_rest_frames_on_export.isChecked())
                 elif exporter == "JSON":
-                    self.doc.current_voice.export_json(file_path)
+                    self.doc.current_voice.export_json(file_path, self.doc.soundPath,
+                                                       self.main_window.apply_rest_frames_on_export.isChecked())
 
     def on_sel_voice_tab(self, e):
         if not self.doc:
@@ -1111,7 +1127,8 @@ class LipsyncFrame:
         language = self.main_window.language_choice.currentText()
         if (self.doc is not None) and (self.doc.current_voice is not None):
             voiceimage_path = QtWidgets.QFileDialog.getExistingDirectory(self.main_window,
-                                                                         self.translator.translate("LipsyncFrame", "Choose Path for Images"),
+                                                                         self.translator.translate("LipsyncFrame",
+                                                                                                   "Choose Path for Images"),
                                                                          self.config.value("MouthDir",
                                                                                            os.path.join(os.path.dirname(
                                                                                                os.path.abspath(
@@ -1133,7 +1150,7 @@ class LipsyncFrame:
                 self.main_window.mouth_view.current_mouth = self.main_window.mouth_choice.currentText()
 
     def on_reload_dictionary(self, event=None):
-        print("reload the dictionary")
+        logging.info("reload the dictionary")
         lang_config = self.doc.language_manager.language_table[self.main_window.language_choice.currentText()]
         self.doc.language_manager.load_language(lang_config, force=True)
 
