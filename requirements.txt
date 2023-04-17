@@ -3,7 +3,7 @@ cffi
 numpy
 pydub
 anytree
-PySide2
+PySide6
 audioread
 allosaurus >= 1.0.1
 appdirs

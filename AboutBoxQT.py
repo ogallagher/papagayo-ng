@@ -21,15 +21,15 @@
 # Foundation, Inc., 51 Franklin Street, Fifth Floor, Boston, MA  02110-1301, USA.
 import os
 
-import PySide2.QtCore as QtCore
-import PySide2.QtGui as QtGui
+import PySide6.QtCore as QtCore
+import PySide6.QtGui as QtGui
 import yaml
-from PySide2.QtGui import QDesktopServices
-import PySide2.QtWidgets as QtWidgets
+from PySide6.QtGui import QDesktopServices
+import PySide6.QtWidgets as QtWidgets
 # from PySide2.QtWebEngineWidgets import QWebEngineView, QWebEnginePage
 
-from PySide2.QtUiTools import QUiLoader as uic
-from PySide2.QtCore import QFile
+from PySide6.QtUiTools import QUiLoader as uic
+from PySide6.QtCore import QFile
 
 import utilities
 

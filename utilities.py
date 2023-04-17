@@ -124,6 +124,8 @@ def rhubarb_binaries_exists():
 _INIT_LOGGING_DONE = False
 def init_logging():
     """Set up logging streams and formatters.
+
+    Located in utilities so that any entrypoint script (ex. breakdowns/<language>_breakdown.py) can use this logging config.
     """
 
     global _INIT_LOGGING_DONE
